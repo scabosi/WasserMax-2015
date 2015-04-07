@@ -10,12 +10,12 @@ das Stellen der Uhr.
 Unterstützte Funktionen
 - Ansteuerung einer <a href="http://www.conrad.de/ce/de/product/197720/8fach-Relaiskarte-Baustein-12-24-VDC-8-Relaisausgaenge">8-fach Relais Karte </a>(für die direkte Ansteuerung ist eine Modifikation notwendig)
 - Temperaturmessung über LM35 Sensor
-- automaische Zeiteinstellung über <a href="http://www.conrad.de/ce/de/product/641138/CE-DCF-Empfaengerplatine/?ref=search&rt=search&rb=1">DVF77 Empänger</a>
+- automatische Zeiteinstellung über <a href="http://www.conrad.de/ce/de/product/641138/CE-DCF-Empfaengerplatine/?ref=search&rt=search&rb=1">DCF77 Empänger</a>
 - Setup / Programmierung / Info Betriebszustand  über 8fach LCD Display
 - einfache Programmierung über 3 Tasten
 - Programm für 7 Tage und 2 Schaltzeiten pro Kanal
 - Wahl der Temperaturschwelle für Frostschutzberegnung
-- Frei wählbarer Ausgang für Frostschutzberegnung
+- frei wählbarer Ausgang für Frostschutzberegnung
 - einstellbare Pause der Frostschutzberegnung
 
 Benötigte Libraries
