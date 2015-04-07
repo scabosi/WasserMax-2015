@@ -1194,6 +1194,10 @@ void zeiten_bearbeiten_tag(){
             			mode_zt=false;
             			zeiten_bearbeiten_output(i_tag);
               			break;
+                case 4:
+                    mode_zt=false;
+                    zeiten_bearbeiten_output(i_tag);
+                    break;
             		case 5:
               			mode_zt=false;
               			zeiten_bearbeiten_output(i_tag);
