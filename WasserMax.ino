@@ -1,7 +1,7 @@
 
 /****************************************************
-* 				Regenmacher V0.1                          *
-*         vom 02.04.2015                            *
+* 				Regenmacher V0.1t                         *
+*         vom 12.04.2015                            *
 * 				Tibor Banvölgyi 2015                      *
 * 													                        *
 * Ansteuerung Relais-Karte über Arduino mit DFC-Uhr *
@@ -145,14 +145,14 @@ void setup () {
   	lcd.setCursor(0, 0);
 	lcd.print("Firmware");
 	lcd.setCursor(0, 1);
-	lcd.print("V0.1s");
+	lcd.print("V0.1t");
 
     delay(1000);
     lcd.clear();
     lcd.setCursor(0, 0);
   lcd.print("FW Datum");
   lcd.setCursor(0, 1);
-  lcd.print("02.04.15");
+  lcd.print("12.04.15");
 	 delay(1000);
 
 	 stelle_uhr();
@@ -254,8 +254,7 @@ void setup_menu (){
     }
 
     if (bouncer_Enter.update ( )== true){
-      if (bouncer_Enter.risingEdge()== true){
-               Serial.println(f);
+      if (bouncer_Enter.risingEdge()== true){              
               switch (f){
                 case 1:
                   zeiten_bearbeiten_tag();
@@ -272,11 +271,7 @@ void setup_menu (){
                 case 5:
                     mode=false;
                   break;
-              }
-
-              Serial.println(f);
-
-
+              }  
               switch (f){
               case 1:
                 lcd.clear();
@@ -371,11 +366,7 @@ void setup_mode (){
 
 //Frost pruefen
 
-void check_freeze(int avgTemp){
-
-  Serial.println(avgTemp);
-  Serial.println(threshold);
-  Serial.println(frost_pause);
+void check_freeze(int avgTemp){ 
 
   if (avgTemp<threshold) {
 
@@ -668,8 +659,7 @@ int bit_in_kommando(int stelle) {
 
 /*Zeiten im EEPROM lesen*/
 void readEEPROM (){
-
-
+  Serial.println("load");
 	int adr=0;
 	int byte1=0;
 	int byte2=0;
@@ -681,19 +671,23 @@ void readEEPROM (){
     	for (int j=0;j<7;j++)
       		for (int k=0;k<4;k++){
 
-        		adr=((i)*7)+((j)*7)+(2*k)+1;
-				byte1=EEPROM.read(adr);
-				byte2=EEPROM.read(adr+1);
-				wert=byte1*255+byte2;
+        		//adr=((i)*7)+((j)*7)+(2*k)+1; // Berechnung der Adresse alt
 
+
+            adr=((k)*2)+((j)*8)+((i)*64); //Adresse berechnen neu
+            Serial.println(adr);
+				    byte1=EEPROM.read(adr);
+				    byte2=EEPROM.read(adr+1);
+				    wert=byte1*255+byte2;
         		zeiten [i][j][k]=wert;
 
       		}
+   Serial.println("load ende");
 }
 
 /*Zeiten im EEPROM löschen*/
 void resetEEPROM (){
-
+  Serial.println("reset");
 	int adr=0;
 	int byte1=0;
 	int byte2=0;
@@ -705,7 +699,9 @@ void resetEEPROM (){
     	for (int j=0;j<7;j++)
       		for (int k=0;k<4;k++){
 
-        		adr=((i)*7)+((j)*7)+(2*k)+1;
+            adr=((k)*2)+((j)*8)+((i)*64); 
+            Serial.println(adr);
+        		
 				EEPROM.write(adr,0);
 				EEPROM.write(adr+1,0);
 
@@ -717,7 +713,7 @@ void resetEEPROM (){
   	lcd.setCursor(0, 1);
   	lcd.print("OK");
   	delay(2000);
-
+     Serial.println("reset ende");
 
 }
 
@@ -838,270 +834,7 @@ void auto_initialise(){
 
 
 
-//stellen der Uhr manuell
-void stelle_uhr_man(){
 
-	int i=1;
-
-	time_t t=now();
-	lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Uhrzeit");
-    lcd.setCursor(0, 1);
-
-     if (hour(t)<10){
-    	lcd.print("0");
-    	lcd.print(hour(t));
-    }
-    else {
-    	lcd.print(hour(t));
-    }
-
-    lcd.print(":");
-    if (minute(t)<10){
-    	lcd.print("0");
-    	lcd.print(minute(t));
-    }
-    else {
-    	lcd.print(minute(t));
-    }
-    lcd.print(" OK");
-	lcd.setCursor(0, 1);
-	lcd.blink();
-	boolean mode_1=true;
-
-	while (mode_1==true){
-    	if (bouncer_Val.update ( )== true){
-       		if (bouncer_Val.risingEdge()== true){
-       			if(i<3){
-           			i++;
-         		}
-         		else{
-           			i=1;
-         		}
-        		switch (i){
-          			case 1:
-          				lcd.setCursor(0, 1);
-						lcd.blink();
-          				break;
-          			case 2:
-          				lcd.setCursor(3, 1);
-						lcd.blink();
-          				break;
-          			case 3:
-          				lcd.setCursor(6, 1);
-						lcd.blink();
-          				break;
-          		}
-       		}
-		}
-		if (bouncer_Enter.update ( )== true){
-       		if (bouncer_Enter.risingEdge()== true){
-       			switch (i){
-          			case 1:
-          				stunde_temp=stunde_stellen(stunde_temp);
-          				setTime(stunde_temp,minute_temp,0,1,1,13);
-          				t=now();
-          				lcd.setCursor(0, 1);
-     					if (hour(t)<10){
-    						lcd.print("0");
-    						lcd.print(hour(t));
-    					}
-    					else {
-    						lcd.print(hour(t));
-    					}
-
-    					lcd.print(":");
-    					if (minute(t)<10){
-    						lcd.print("0");
-    						lcd.print(minute(t));
-    					}
-    					else {
-    						lcd.print(minute(t));
-    					}
-    					lcd.print(" OK");
-						lcd.setCursor(3, 1);
-						lcd.blink();
-						i=2;
-          				break;
-          			case 2:
-          			    minute_temp=minute_stellen(minute_temp);
-          				setTime(stunde_temp,minute_temp,0,1,1,13);
-          				t=now();
-          				lcd.setCursor(0, 1);
-     					if (hour(t)<10){
-    						lcd.print("0");
-    						lcd.print(hour(t));
-    					}
-    					else {
-    						lcd.print(hour(t));
-    					}
-
-    					lcd.print(":");
-    					if (minute(t)<10){
-    						lcd.print("0");
-    						lcd.print(minute(t));
-    					}
-    					else {
-    						lcd.print(minute(t));
-    					}
-    					lcd.print(" OK");
-						lcd.setCursor(3, 1);
-						lcd.blink();
-						i=2;
-          				break;
-          				break;
-          			case 3:
-          				mode_1=false;
-          				mode=false;
-          				lcd.noBlink();
-          				break;
-          		}
-       		}
-    	}
-    }
-
-
-}
-
-
-void stelle_datum_man () {
-	long year_int;
-	String year_temp;
-	String year_temp2;
-	int i=1;
-
-	time_t t=now();
-	lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Datum");
-    lcd.setCursor(0, 1);
-
-     if (day(t)<10){
-    	lcd.print("0");
-    	lcd.print(day(t));
-    }
-    else {
-    	lcd.print(day(t));
-    }
-
-    lcd.print(".");
-    if (month(t)<10){
-    	lcd.print("0");
-    	lcd.print(month(t));
-    }
-    else {
-    	lcd.print(month(t));
-    }
-    lcd.print(".");
-
-    year_temp=String(year(t));
-    year_temp2=year_temp2+year_temp.charAt(2);
-    year_temp2=year_temp2+year_temp.charAt(3);
-
-    year_int=year_temp2.toInt();
-
-
-    lcd.print(year_int);
-	lcd.setCursor(0, 1);
-	lcd.blink();
-	boolean mode_1=true;
-	delay(2000);
-	lcd.setCursor(0, 1);
-	lcd.blink();
-	boolean mode_12=true;
-
-	while (mode_1==true){
-    	if (bouncer_Val.update ( )== true){
-       		if (bouncer_Val.risingEdge()== true){
-       			if(i<3){
-           			i++;
-         		}
-         		else{
-           			i=1;
-         		}
-        		switch (i){
-          			case 1:
-          				lcd.setCursor(0, 1);
-						lcd.blink();
-          				break;
-          			case 2:
-          				lcd.setCursor(3, 1);
-						lcd.blink();
-          				break;
-          			case 3:
-          				lcd.setCursor(6, 1);
-						lcd.blink();
-          				break;
-          		}
-       		}
-		}
-		if (bouncer_Enter.update ( )== true){
-       		if (bouncer_Enter.risingEdge()== true){
-       			switch (i){
-          			case 1:
-          				tag_temp=tag_stellen(tag_temp);
-          				setTime(stunde_temp,minute_temp,0,tag_temp,month(t),13);
-          				t=now();
-          				lcd.setCursor(0, 1);
-     					if (day(t)<10){
-    						lcd.print("0");
-    						lcd.print(day(t));
-    					}
-    					else {
-    						lcd.print(day(t));
-    					}
-
-    					lcd.print(".");
-    					if (month(t)<10){
-    						lcd.print("0");
-    						lcd.print(month(t));
-    					}
-    					else {
-    						lcd.print(month(t));
-    					}
-    					lcd.print(" OK");
-						lcd.setCursor(3, 1);
-						lcd.blink();
-						i=2;
-          				break;
-          			case 2:
-          			    monat_temp=monat_stellen(monat_temp);
-          				setTime(stunde_temp,minute_temp,0,day(t),monat_temp,13);
-          				t=now();
-          				lcd.setCursor(0, 1);
-     					if (day(t)<10){
-    						lcd.print("0");
-    						lcd.print(day(t));
-    					}
-    					else {
-    						lcd.print(day(t));
-    					}
-
-    					lcd.print(".");
-    					if (month(t)<10){
-    						lcd.print("0");
-    						lcd.print(month(t));
-    					}
-    					else {
-    						lcd.print(month(t));
-    					}
-    					lcd.print(" OK");
-						lcd.setCursor(3, 1);
-						lcd.blink();
-						i=2;
-          				break;
-          				break;
-          			case 3:
-          				mode_1=false;
-          				mode=false;
-          				lcd.noBlink();
-          				break;
-          		}
-       		}
-    	}
-    }
-}
 
 
 //Bearbeiten der Zeiten Auswahl Tag
@@ -1355,13 +1088,12 @@ void zeiten_bearbeiten_zeiten(int tag,int ausgang){
 	int func_iz;
 
     for (int i_zbz=0;i_zbz<4;i_zbz++){
-    	adr=((tag-1)*7)+((ausgang-1)*7)+(2*i_zbz)+1;
-
-		byte1=EEPROM.read(adr);
-		byte2=EEPROM.read(adr+1);
-		wert=byte1*255+byte2;
-		stunde_anz=wert/60;
-		minute_anz=wert%60;
+    	adr=((tag-1)*64)+((ausgang-1)*8)+(2*i_zbz);
+		  byte1=EEPROM.read(adr);
+		  byte2=EEPROM.read(adr+1);
+		  wert=byte1*255+byte2;
+		  stunde_anz=wert/60;
+		  minute_anz=wert%60;
 
     	switch (i_zbz){
     		case 0:
@@ -1468,9 +1200,10 @@ void zeiten_bearbeiten_zeiten(int tag,int ausgang){
 
 		wert=stunde_temp_zbz*60+minute_temp_zbz;
 		byte1=wert/255;
-		byte2=wert%255;
-
-		adr=((tag-1)*7)+((ausgang-1)*7)+(2*i_zbz)+1;
+		byte2=wert%255;  
+   
+		adr=((tag-1)*64)+((ausgang-1)*8)+(2*i_zbz);
+   
 		EEPROM.write(adr, byte1);
 		EEPROM.write(adr+1, byte2);
 
@@ -1758,303 +1491,12 @@ void temp_pause_zeit(){
 }
 
 
-//Funktion für Stellen der Stunde
-int stunde_stellen(int stunde){
-	boolean func_loop=true;
-	lcd.setCursor(0,0);
-	lcd.print("Stunde:");
-	lcd.setCursor(0,1);
-	int func_i=stunde;
-	boolean mode_h=true;
-	while (mode_h==true){
-     	if (bouncer_Val.update ( )== true){
-       		if (bouncer_Val.risingEdge()== true){
-       			if(func_i<24){
-           			func_i++;
-         		}
-         		else{
-           			func_i=0;
-         		}
-
-         		lcd.setCursor(0,1);
-
-         		if (func_i<10){
-    				lcd.print("0");
-    				lcd.print(func_i);
-    			}
-    			else {
-    				lcd.print(func_i);
-    			}
-    			lcd.setCursor(1,1);
-       		}
-       	}
-       	if (bouncer_Enter.update ( )== true){
-       		if (bouncer_Enter.risingEdge()== true){
-       			lcd.clear();
-       			time_t t=now();
-    			lcd.setCursor(0, 0);
-    			lcd.print("Uhrzeit");
-    			lcd.setCursor(0, 1);
-    			lcd.print(hour(t));
-    			lcd.print(":");
-    			if (minute(t)<10){
-    				lcd.print("0");
-    				lcd.print(minute(t));
-    			}
-    			else {
-    				lcd.print(minute(t));
-    			}
-    			lcd.print(" OK");
-				lcd.setCursor(0, 1);
-				lcd.noBlink();
-       			mode_h=false;
-       			return func_i;
-       		}
-       	}
-       	lcd.setCursor(1,1);
-    }
-}
-
-//Funktion für Stellen der Minute
-int minute_stellen(int minute_func){
-	boolean func_loop=true;
-	lcd.setCursor(0,0);
-	lcd.print("Minute:");
-	lcd.setCursor(0,1);
-	int func_i=minute_func;
-	boolean mode_m=true;
-	while (mode_m==true){
-     	if (bouncer_Val.update ( )== true){
-       		if (bouncer_Val.risingEdge()== true){
-       			if(func_i<60){
-           			func_i++;
-         		}
-         		else{
-           			func_i=0;
-         		}
-
-         		lcd.setCursor(3,1);
-
-         		if (func_i<10){
-    				lcd.print("0");
-    				lcd.print(func_i);
-    			}
-    			else {
-    				lcd.print(func_i);
-    			}
-    			lcd.setCursor(4,1);
-       		}
-       	}
-       	if (bouncer_Enter.update ( )== true){
-       		if (bouncer_Enter.risingEdge()== true){
-       			lcd.clear();
-       			time_t t=now();
-    			lcd.setCursor(0, 0);
-    			lcd.print("Uhrzeit");
-    			lcd.setCursor(0, 1);
-    			lcd.print(hour(t));
-    			lcd.print(":");
-    			if (minute(t)<10){
-    				lcd.print("0");
-    				lcd.print(minute(t));
-    			}
-    			else {
-    				lcd.print(minute(t));
-    			}
-    			lcd.print(" OK");
-				lcd.setCursor(4, 1);
-				lcd.noBlink();
-       			mode_m=false;
-       			return func_i;
-       		}
-       	}
-       	lcd.setCursor(4,1);
-    }
-
-}
 
 
 
-//Funktion für Stellen des Tages
-int tag_stellen(int tag){
-	boolean func_loop=true;
-
-	lcd.setCursor(0,0);
-	lcd.print("Tag:  ");
-	lcd.setCursor(0,1);
-	int func_i=tag;
-	boolean mode_h=true;
-	while (mode_h==true){
-     	if (bouncer_Val.update ( )== true){
-       		if (bouncer_Val.risingEdge()== true){
-       			if(func_i<31){
-           			func_i++;
-         		}
-         		else{
-           			func_i=1;
-         		}
-
-         		lcd.setCursor(0,1);
-
-         		if (func_i<10){
-    				lcd.print("0");
-    				lcd.print(func_i);
-    			}
-    			else {
-    				lcd.print(func_i);
-    			}
-    			lcd.setCursor(1,1);
-       		}
-       	}
-       	if (bouncer_Enter.update ( )== true){
-       		if (bouncer_Enter.risingEdge()== true){
-       			lcd.clear();
-       			time_t t=now();
-    			lcd.setCursor(0, 0);
-    			lcd.print("Tag");
-    			lcd.setCursor(0, 1);
-    			lcd.print(day(t));
-    			lcd.print(".");
-    			if (month(t)<10){
-    				lcd.print("0");
-    				lcd.print(month(t));
-    			}
-    			else {
-    				lcd.print(month(t));
-    			}
-    			lcd.print(" OK");
-				lcd.setCursor(0, 1);
-				lcd.noBlink();
-       			mode_h=false;
-       			return func_i;
-       		}
-       	}
-       	lcd.setCursor(1,1);
-    }
-}
 
 
-//Funktion für Stellen des Monats
 
-int monat_stellen(int monat_func){
-	boolean func_loop=true;
-	lcd.setCursor(0,0);
-	lcd.print("Monat:");
-	lcd.setCursor(0,1);
-	int func_i=monat_func;
-	boolean mode_m=true;
-	while (mode_m==true){
-     	if (bouncer_Val.update ( )== true){
-       		if (bouncer_Val.risingEdge()== true){
-       			if(func_i<12){
-           			func_i++;
-         		}
-         		else{
-           			func_i=1;
-         		}
-
-         		lcd.setCursor(3,1);
-
-         		if (func_i<10){
-    				lcd.print("0");
-    				lcd.print(func_i);
-    			}
-    			else {
-    				lcd.print(func_i);
-    			}
-    			lcd.setCursor(4,1);
-       		}
-       	}
-       	if (bouncer_Enter.update ( )== true){
-       		if (bouncer_Enter.risingEdge()== true){
-       			lcd.clear();
-       			time_t t=now();
-    			lcd.setCursor(0, 0);
-    			lcd.print("Monat:");
-    			lcd.setCursor(0, 1);
-    			lcd.print(hour(t));
-    			lcd.print(".");
-    			if (minute(t)<10){
-    				lcd.print("0");
-    				lcd.print(minute(t));
-    			}
-    			else {
-    				lcd.print(minute(t));
-    			}
-    			lcd.print(" OK");
-				lcd.setCursor(4, 1);
-				lcd.noBlink();
-       			mode_m=false;
-       			return func_i;
-       		}
-       	}
-       	lcd.setCursor(4,1);
-    }
-
-
-}
-/*
-
-int jahr_stellen(int jahr_func){
-	boolean func_loop=true;
-	lcd.setCursor(0,0);
-	lcd.print("Jahr:");
-	lcd.setCursor(0,1);
-	int func_i=monat_func;
-	boolean mode_m=true;
-	while (mode_m==true){
-     	if (bouncer_Val.update ( )== true){
-       		if (bouncer_Val.risingEdge()== true){
-       			if(func_i<12){
-           			func_i++;
-         		}
-         		else{
-           			func_i=1;
-         		}
-
-         		lcd.setCursor(3,1);
-
-         		if (func_i<10){
-    				lcd.print("0");
-    				lcd.print(func_i);
-    			}
-    			else {
-    				lcd.print(func_i);
-    			}
-    			lcd.setCursor(4,1);
-       		}
-       	}
-       	if (bouncer_Enter.update ( )== true){
-       		if (bouncer_Enter.risingEdge()== true){
-       			lcd.clear();
-       			time_t t=now();
-    			lcd.setCursor(0, 0);
-    			lcd.print("Jahr:");
-    			lcd.setCursor(0, 1);
-    			lcd.print(hour(t));
-    			lcd.print(".");
-    			if (minute(t)<10){
-    				lcd.print("0");
-    				lcd.print(minute(t));
-    			}
-    			else {
-    				lcd.print(minute(t));
-    			}
-    			lcd.print(" OK");
-				lcd.setCursor(4, 1);
-				lcd.noBlink();
-       			mode_m=false;
-       			return func_i;
-       		}
-       	}
-       	lcd.setCursor(4,1);
-    }
-
-
-}
-
-
-*/
 
 
 void stelle_uhr() {
