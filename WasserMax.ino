@@ -1,12 +1,19 @@
 
 /****************************************************
-* 				Regenmacher V0.1t                         *
-*         vom 12.04.2015                            *
+* 				Regenmacher V0.2a                         *
+*         vom 10.10.2015                            *
 * 				Tibor Banvölgyi 2015                      *
 * 													                        *
 * Ansteuerung Relais-Karte über Arduino mit DFC-Uhr *
 * und 2x8 Display									                  *
 ****************************************************/
+
+/***************************************************
+*Version 0.2a fixes:
+*- changed temperatur sensor to lm335
+*- bugfix checkfreeze() ,if temperature rises during freeze status 
+*  above threshhold, the freeze status didn't changed (always open valve)
+***************************************************/
 
 #include <DCF77.h>
 #include <Utils.h>
@@ -17,57 +24,58 @@
 #include <Time.h>
 #include <Utils.h>
 
-#define DCF_PIN 2                // DCF77 Empfänger initialisieren
-#define DCF_INTERRUPT 0          // Interrupt für Empfänger reservieren
+#define DCF_PIN 2                // DCF77 Empfänger initialisieren, initialite DCF77
+#define DCF_INTERRUPT 0          // Interrupt für Empfänger reservieren, interrupt for DCF77
 time_t time;
 DCF77 DCF = DCF77(DCF_PIN,DCF_INTERRUPT, true);
 
 /*Buttons zuweisen*/
-
+//map buttons to inputs
 #define BUTTON_Man 13
 #define BUTTON_Val 3
 #define BUTTON_Enter 8
 
 /*Buttons entprellen*/
-
+//debounce buttons
 Bounce bouncer_Man = Bounce( BUTTON_Man,5 );
 Bounce bouncer_Val = Bounce( BUTTON_Val,5 );
 Bounce bouncer_Enter = Bounce( BUTTON_Enter,5 );
 
 /*LCD initialisieren*/
-
+//LCD initialyzing
 LiquidCrystal lcd(12, 11, 7, 6, 5, 4);
 
 
-int zeiten [7][7][4];/*Array für Tag,Relais,Zeit1-4*/
+int zeiten [7][7][4];//Array für Tag,Relais,Zeit1-4, array for day,relay,time
 
-int minutenzeit; //Variable für Zeit in Minuten
+int minutenzeit; //Variable für Zeit in Minuten,time in minutes
 
 byte tag=1;
 
-boolean on[7]={0,0,0,0,0,0,0}; //Status der Ausgänge
+boolean on[7]={0,0,0,0,0,0,0}; //Status der Ausgänge,state of outputs
 byte addr=0;
 byte val=0;
-boolean mode=false; //Status Betriebmodus
-byte cursor_pos=0; //Cursor Menü
+boolean mode=false; //Status Betriebmodus,state menu
+byte cursor_pos=0; //Cursor Menü,cursor menu
 byte zustand=0;
-byte stunde_temp;//globale Variablen für das manipulieren Stunde
-byte minute_temp;//globale Variablen für das manipulieren Minute
-byte tag_temp;//globale Variablen für das manipulieren Tag
-byte monat_temp;//globale Variablen für das manipulieren Monat
-int jahr_temp;//globale Variablen für das manipulieren Jahr
-byte lm35Pin = 5;//Input Pin fue Temp Sensor
-int actualTemp; //ausgelesene Sensortemperatur
-int avgTemp; //Durchschnittstemperatur
-int threshold;//Schwellwert fuer Frostschutz
-long frostend_time=0;//Ende des Frostschutzes in Unix Millis
-long frostpause_end_time=0;//Ende Pause des Frostschutzes in Unix Millis
-int frost_pause; //Pausenzeit aus EEPROM
-int temperature_array[5]={0,0,0,0,0};//Temperatur Array fur Mittelwert
+byte stunde_temp;//globale Variablen für das manipulieren Stunde, global for manipulating hour
+byte minute_temp;//globale Variablen für das manipulieren Minute, global for manipulating minute
+byte tag_temp;//globale Variablen für das manipulieren Tag, global for manipulating day
+byte monat_temp;//globale Variablen für das manipulieren Monat, global for manipulating monat
+int jahr_temp;//globale Variablen für das manipulieren Jahr, global for manipulating year
+int lm35Pin = A5;//Input Pin fuer Temp Sensor, input pin for sensor
+
+int actualTemp; //ausgelesene Sensortemperatur, sensor temp
+int avgTemp; //Durchschnittstemperatur, average temp
+int threshold;//Schwellwert fuer Frostschutz, freeze threshhold
+long frostend_time=0;//Ende des Frostschutzes in Unix Millis, end of freezetime in millis
+long frostpause_end_time=0;//Ende Pause des Frostschutzes in Unix Millis, end of freeze pause in millis
+int frost_pause; //Pausenzeit aus EEPROM, pause from EEPROM
+int temperature_array[5]={0,0,0,0,0};//Temperatur Array fur Mittelwert, array for average temperature
 byte temperature_index=0;//Index Temperatur Array
-byte minute_space=0;//Speicher fuer Minuten der Mittelwertsberechnung fuer Temperatur
-boolean frost_status=false;//Status fuer Frostschutz
-byte temperature_port;//Speicher fuer Frostschutz Port Relay
+byte minute_space=0;//Speicher fuer Minuten der Mittelwertsberechnung fuer Temperatur, variable for minutes of temp average
+boolean frost_status=false;//Status fuer Frostschutz, freeze state
+byte temperature_port;//Speicher fuer Frostschutz Port Relay, freeze output
 
 /*Ausgabe über den seriellen Port an die Relais definieren*/
 
@@ -81,8 +89,7 @@ void setup () {
         avgTemp=0;
 
         //Pausenzeit aus EEPROM laden und in int umrechnen
-
-
+        //read pause time from EEPROM
         byte pause1=EEPROM.read(501);
         byte pause2=EEPROM.read(502);
 
@@ -94,12 +101,12 @@ void setup () {
         }
 
         //Port für Frostüberwachung aus EEPROM laden
-
+        //loading freeze valve output from EEPROM
         temperature_port=EEPROM.read(500);
 
 
         //Schwellwert aus EEPROM laden und in int umrechnen
-
+        //loading treshold from EEPROM an parse to int
         byte low, high;
 
         low=EEPROM.read(503);
@@ -116,13 +123,14 @@ void setup () {
 
 
 	Serial.begin(9600);
+        Serial.println("Start Serial");
 	mySerial.begin(19200);
 
-  analogReference(INTERNAL);
+        //analogReference(INTERNAL); //used by lm35 sensor - faulty analogread(); ->1024
 
 	DCF.Start();
 
-	setTime(0,0,0,01,01,15); //Uhrzeit  auf Standardzeit stellen
+	setTime(0,0,0,01,01,15); //Uhrzeit  auf Standardzeit stellen, default tim
 
 	//Buttons als Eingänge definieren
 	pinMode(BUTTON_Man,INPUT);
@@ -145,14 +153,14 @@ void setup () {
   	lcd.setCursor(0, 0);
 	lcd.print("Firmware");
 	lcd.setCursor(0, 1);
-	lcd.print("V0.1t");
+	lcd.print("V0.2a");
 
     delay(1000);
     lcd.clear();
     lcd.setCursor(0, 0);
   lcd.print("FW Datum");
   lcd.setCursor(0, 1);
-  lcd.print("12.04.15");
+  lcd.print("10.10.15");
 	 delay(1000);
 
 	 stelle_uhr();
@@ -171,13 +179,15 @@ void setup () {
     //alle Ausgänge schliessen und Display initialisieren
 
   	sendCommand(1,0,0);
-    sendCommand(7,0,255);
+        sendCommand(7,0,255);
 
   	lcd.clear();
   	lcd.setCursor(0, 0);
   	lcd.print("A1234567");
   	lcd.setCursor(0, 1);
   	lcd.print(" 0000000");
+  
+        Serial.println("Setup complete...");
   	}
 
 int freeRam ()
@@ -397,6 +407,11 @@ void check_freeze(int avgTemp){
     if ((frostpause_end_time==0) && (frostend_time==0)) {
        frost_status=false;
     }
+    
+    if ((now() >= frostpause_end_time)&&(now() >= frostend_time)){
+    
+       frost_status=false;
+    }
 
   }
 
@@ -407,7 +422,8 @@ void check_freeze(int avgTemp){
 void loop () {
 
       //Temperatur mitteln
-
+     
+      
       if (minute_space < minute()){
 
           minute_space=minute();
@@ -513,17 +529,17 @@ void loop () {
   				}
   				else {
 
-            if (frostend_time>0){
+            if ((frostend_time>0)&&(i==temperature_port)){
               lcd.setCursor(i+1, 1);
               lcd.print("*");
             }
 
-             if (frostpause_end_time>0){
+             if ((frostpause_end_time>0)&&(i==temperature_port)){
               lcd.setCursor(i+1, 1);
               lcd.print("P");
             }
 
-            if ((frostend_time==0) && (frostpause_end_time==0)) {
+            else  {
               lcd.setCursor(i+1, 1);
               lcd.print("X");
             }
@@ -616,8 +632,8 @@ void digitalClockDisplay(){
 
 
 //Temperatur von Sensor ermitteln
-int getTemperature(){
-
+float getTemperature(){
+      /* LM35 Code
          float temperature;
          int reading;
 
@@ -625,8 +641,17 @@ int getTemperature(){
          temperature = reading / 9.31;
 
          return temperature;
-
-
+      */
+      
+      /*LM335 Code */
+      int rawvoltage= analogRead(lm35Pin);
+      float millivolts= (rawvoltage/1024.0) * 5000;
+      float kelvin= (millivolts/10);
+      float celsius= kelvin - 273.15;
+      float temperature = celsius;
+      Serial.print( temperature);
+      return temperature;
+      
 }
 
 //
